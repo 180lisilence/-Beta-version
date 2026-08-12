@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人工作生活管理</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- 侧边导航 -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">◆</div>
+    <div class="logo-text">个人工作台</div>
+  </div>
+  <nav class="nav">
+    <a href="#/home" class="nav-item active" data-route="home">
+      <span class="nav-icon">🏠</span><span>首页总览</span>
+    </a>
+    <a href="#/todayPlan" class="nav-item" data-route="todayPlan">
+      <span class="nav-icon">📋</span><span>今日计划</span>
+    </a>
+    <a href="#/media" class="nav-item" data-route="media">
+      <span class="nav-icon">📱</span><span>自媒体</span>
+    </a>
+    <a href="#/develop" class="nav-item" data-route="develop">
+      <span class="nav-icon">💻</span><span>开发工作</span>
+    </a>
+    <a href="#/consult" class="nav-item" data-route="consult">
+      <span class="nav-icon">💼</span><span>咨询工作</span>
+    </a>
+    <a href="#/fitness" class="nav-item" data-route="fitness">
+      <span class="nav-icon">🏋️</span><span>健身计划</span>
+    </a>
+    <a href="#/diet" class="nav-item" data-route="diet">
+      <span class="nav-icon">🥗</span><span>饮食计划</span>
+    </a>
+    <a href="#/game" class="nav-item" data-route="game">
+      <span class="nav-icon">🎮</span><span>游戏娱乐</span>
+    </a>
+    <a href="#/ai" class="nav-item" data-route="ai">
+      <span class="nav-icon">🤖</span><span>AI 对话</span>
+    </a>
+    <a href="#/profile" class="nav-item" data-route="profile">
+      <span class="nav-icon">👤</span><span>个人中心</span>
+    </a>
+    <a href="#/setting" class="nav-item" data-route="setting">
+      <span class="nav-icon">⚙️</span><span>数据与设置</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="footer-dot"></div>
+    <span>本地运行 · 纯隐私</span>
+  </div>
+  <div class="theme-toggle" id="themeToggle" title="切换主题">
+    <span class="theme-icon" id="themeIcon">🌙</span>
+    <span id="themeLabel">夜间模式</span>
+  </div>
+</aside>
+<!-- 主内容区 -->
+<main class="main">
+  <!-- 动态视图容器，由 JS 根据 hash 路由切换内容 -->
+  <div id="view-container"></div>
+</main>
+<!-- 全局弹窗遮罩层 -->
+<div id="modal-overlay" class="modal-overlay hidden"></div>
+<!-- 全局弹窗容器 -->
+<div id="modal" class="modal hidden">
+  <div class="modal-header">
+    <h3 id="modal-title">标题</h3>
+    <button class="modal-close" id="modal-close">✕</button>
+  </div>
+  <div class="modal-body" id="modal-body"></div>
+  <div class="modal-footer" id="modal-footer"></div>
+</div>
+<!-- 全局 Toast 提示容器 -->
+<div id="toast-container"></div>
+<!-- AI 悬浮球（任意页面可拖拽快捷对话） -->
+<div class="ai-fab" id="ai-fab" title="AI 快捷对话">
+  <span>🤖</span>
+</div>
+<!-- AI 快捷对话面板 -->
+<div class="ai-quick-panel" id="ai-quick-panel" style="display:none">
+  <div class="ai-quick-header">
+    <div class="ai-quick-title">🤖 AI 快捷对话</div>
+    <button class="ai-quick-close" id="ai-quick-close">✕</button>
+  </div>
+  <div class="ai-quick-body" id="ai-quick-body"></div>
+  <div class="ai-quick-input-wrap">
+    <textarea id="ai-quick-input" placeholder="输入消息，Enter 发送，Shift+Enter 换行..." rows="2"></textarea>
+    <button id="ai-quick-send" class="btn btn-primary btn-sm">发送</button>
+  </div>
+</div>
+<!-- 手机端底部导航栏 -->
+<nav class="bottom-nav">
+  <a href="#/home" class="bottom-nav-item active" data-route="home"><span class="bottom-nav-icon">🏠</span><span>首页</span></a>
+  <a href="#/todayPlan" class="bottom-nav-item" data-route="todayPlan"><span class="bottom-nav-icon">📋</span><span>计划</span></a>
+  <a href="#/ai" class="bottom-nav-item" data-route="ai"><span class="bottom-nav-icon">🤖</span><span>AI</span></a>
+  <a href="#/profile" class="bottom-nav-item" data-route="profile"><span class="bottom-nav-icon">👤</span><span>我的</span></a>
+  <a href="#/setting" class="bottom-nav-item" data-route="setting"><span class="bottom-nav-icon">⚙️</span><span>设置</span></a>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>
