@@ -1661,7 +1661,7 @@ input[type="checkbox"] {
 
 /* ========== 响应式 ========== */
 @media (max-width: 900px) {
-  .sidebar { width: 60px; }
+  .sidebar { width: 100px;min-width: 100px; }
   .sidebar.collapsed { width: 0; min-width: 0; }
   .logo-text, .nav-item span:last-child { display: none; }
   .nav-item { justify-content: center; }

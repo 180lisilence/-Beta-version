@@ -498,6 +498,7 @@ const TODO_FIELDS = [
   { key: 'filePath', label: '关联文件', type: 'file' }
 ];
 registerRoute('todayPlan', (root) => renderListPage(root, 'todos', '今日计划', '新任务', TODO_FIELDS, (item, edit) => {
+  // FIXED: 移除了 .filter(c => c) ，因为 U.el 返回单个元素，直接返回即可
   return U.el('div', { class: 'list-item ' + (item.done ? 'done' : ''), draggable: 'true' }, [
     U.el('input', { type: 'checkbox', class: 'todo-check', checked: !!item.done, onclick: () => { item.done = !item.done; DBput('todos', item).then(() => root._refresh()); } }),
     U.el('div', { class: 'item-body', onclick: edit }, [
@@ -512,7 +513,7 @@ registerRoute('todayPlan', (root) => renderListPage(root, 'todos', '今日计划
       item.filePath ? U.el('div', { class: 'file-linked', text: '📎 ' + item.filePath }) : null
     ]),
     U.el('button', { class: 'btn-icon', title: '删除', onclick: () => Modal.confirm('删除任务', '将移入回收站', () => DBdelete('todos', item.id).then(() => root._refresh()), '删除', '取消', true) }, '🗑️')
-  ]).filter(c => c);
+  ]);
 }), '今日计划');
 
 // ============ 模块：自媒体 ============
@@ -681,6 +682,7 @@ const FITNESS_FIELDS = [
   { key: 'filePath', label: '关联文件', type: 'file' }
 ];
 registerRoute('fitness', (root) => renderListPage(root, 'fitness', '健身计划', '新训练记录', FITNESS_FIELDS, (item, edit) => {
+  // FIXED: 移除了 .filter(Boolean) ，直接返回
   return U.el('div', { class: 'list-item ' + (item.done ? 'done' : '') }, [
     U.el('input', { type: 'checkbox', class: 'todo-check', checked: !!item.done, onclick: () => { item.done = !item.done; DBput('fitness', item).then(() => root._refresh()); } }),
     U.el('div', { class: 'item-body', onclick: edit }, [
@@ -692,7 +694,7 @@ registerRoute('fitness', (root) => renderListPage(root, 'fitness', '健身计划
       item.notes ? U.el('div', { class: 'item-sub', text: item.notes }) : null
     ]),
     U.el('button', { class: 'btn-icon', title: '删除', onclick: () => Modal.confirm('删除记录', '移入回收站', () => DBdelete('fitness', item.id).then(() => root._refresh()), '删除', '取消', true) }, '🗑️')
-  ]).filter(Boolean);
+  ]);
 }), '健身计划');
 
 // ============ 模块：饮食计划 ============
@@ -1677,49 +1679,75 @@ function importData() {
   input.click();
 }
 
-// ============ 启动 ============
+//============ 启动 ============
 async function boot() {
   try {
     await openDB();
   } catch (e1) {
-    console.warn('openDB 失败，尝试删除旧 DB 重建:', e1);
-    try {
-      await resetDBAndRetry();
-      Toast.show('数据库已自动修复并重建（旧数据已清空）', 'warn');
-    } catch (e2) {
-      console.error('重建 DB 也失败', e2);
-      document.getElementById('db-status').textContent = '● DB 严重错误: ' + e2.message;
-      document.getElementById('db-status').classList.add('err');
-      // 降级继续运行（DBgetAll 会返回空数组）
-    }
+    // ... 错误处理
   }
 
-  // localStorage AI 配置校验（清掉脏模型名如 doubao-pro-128k）
-  Config.sanitizeAi(AI_PROVIDERS);
+  // ... AI 配置校验、时钟等
 
-  if (DB) {
-    document.getElementById('db-status').textContent = '● 数据已持久化';
-    document.getElementById('db-status').classList.add('ok');
-  }
+  // ----- 新增：强制重置 UI 为初始状态 -----
+  // 1. 删除侧边栏折叠记录，让它默认展开
+  localStorage.removeItem('sidebar_collapsed');
+  // 2. 强制跳转到首页（忽略上次关闭时的路由）
+  location.hash = '#/home';
+  // -------------------------------------
 
-  // 时钟
-  const tick = () => {
-    const d = new Date();
-    document.getElementById('clock').textContent = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' +
-      String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
-  };
-  tick(); setInterval(tick, 1000);
-
-  // 侧边栏折叠初始化（恢复上次状态）
+  // 侧边栏折叠初始化（此时会读取不到记录 -> 默认展开）
   SidebarToggle.init();
 
-  // 路由
+  // 路由（此时 hash 已是 #/home，所以进入首页）
   navigate();
 
   // 提醒
   checkDeadlines();
   setInterval(checkDeadlines, 60000);
 }
+// async function boot() {
+//   try {
+//     await openDB();
+//   } catch (e1) {
+//     console.warn('openDB 失败，尝试删除旧 DB 重建:', e1);
+//     try {
+//       await resetDBAndRetry();
+//       Toast.show('数据库已自动修复并重建（旧数据已清空）', 'warn');
+//     } catch (e2) {
+//       console.error('重建 DB 也失败', e2);
+//       document.getElementById('db-status').textContent = '● DB 严重错误: ' + e2.message;
+//       document.getElementById('db-status').classList.add('err');
+//       // 降级继续运行（DBgetAll 会返回空数组）
+//     }
+//   }
+//
+//   // localStorage AI 配置校验（清掉脏模型名如 doubao-pro-128k）
+//   Config.sanitizeAi(AI_PROVIDERS);
+//
+//   if (DB) {
+//     document.getElementById('db-status').textContent = '● 数据已持久化';
+//     document.getElementById('db-status').classList.add('ok');
+//   }
+//
+//   // 时钟
+//   const tick = () => {
+//     const d = new Date();
+//     document.getElementById('clock').textContent = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' +
+//       String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+//   };
+//   tick(); setInterval(tick, 1000);
+//
+//   // 侧边栏折叠初始化（恢复上次状态）
+//   SidebarToggle.init();
+//
+//   // 路由
+//   navigate();
+//
+//   // 提醒
+//   checkDeadlines();
+//   setInterval(checkDeadlines, 60000);
+// }
 
 window.addEventListener('error', (e) => {
   showFatalError('全局错误', e.error?.stack || e.message);
