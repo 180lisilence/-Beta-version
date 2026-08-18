@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 仓库工具｜下载 & 上传</title>
+    <!-- CDN依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 30px max(15px, calc(50% - 620px));
+        }
+        .container {
+            max-width: 1050px;
+        }
+        h1 {
+            color: #f0f6fc;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 26px;
+        }
+        /* 标签栏 */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tab {
+            padding: 10px 20px;
+            border-radius: 6px 6px 0 0;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-bottom: none;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: #238636;
+            color: #fff;
+            border-color: #238636;
+        }
+        .tab-panel {
+            border: 1px solid #30363d;
+            border-radius: 0 8px 8px 8px;
+            background: #161b22;
+            padding: 24px;
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        .row {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #8b949e;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #fff;
+            font-size: 15px;
+        }
+        .flex-row {
+            display: flex;
+            gap:10px;
+            flex-wrap: wrap;
+        }
+        .flex-row > input, .flex-row > select {
+            flex:1;
+            min-width:200px;
+        }
+        button {
+            padding: 12px 18px;
+            border-radius: 6px;
+            border: none;
+            font-size:15px;
+            cursor: pointer;
+        }
+        .btn-green { background:#238636; color:#fff; }
+        .btn-green:hover { background:#2ea043; }
+        .btn-blue { background:#2563eb; color:#fff; }
+        .btn-blue:hover { background:#3b82f6; }
+        .loading { color:#58a6ff; margin:12px 0; display:none; }
+        .error { color:#f85149; margin:12px 0; display:none; }
+        .success { color:#3fb950; margin:12px 0; display:none; }
+        .tip { font-size:13px; color:#8b949e; margin-top:4px; }
+        .repo-info {
+            margin-top:16px;
+            padding:16px;
+            border:1px solid #30363d;
+            border-radius:6px;
+            background:#0d1117;
+            display:none;
+        }
+        .progress-wrap {
+            margin-top:12px;
+            display:none;
+        }
+        #progressBar {
+            width:100%;
+            height:8px;
+            border-radius:4px;
+            background:#30363d;
+        }
+        #progressBar::-webkit-progress-value {
+            background:#238636;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>GitHub 仓库工具｜下载 & 上传</h1>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="download">源码下载器</div>
+        <div class="tab" data-tab="upload">文件上传器</div>
+    </div>
+
+    <!-- ========== 下载面板 ========== -->
+    <div class="tab-panel active" id="panel-download">
+        <div class="flex-row row">
+            <input type="text" id="repoUrlDl" placeholder="仓库地址：https://github.com/xxx/xxx">
+            <select id="branchSelectDl">
+                <option value="">先加载仓库分支</option>
+            </select>
+            <button class="btn-green" id="fetchBtnDl">加载仓库</button>
+            <button class="btn-blue" id="downloadBtnDl" style="display:none">打包下载ZIP</button>
+        </div>
+        <div class="loading" id="loadingTipDl">请求中...</div>
+        <div class="error" id="errorTipDl"></div>
+        <div class="progress-wrap" id="progressBoxDl">
+            <p>进度：<span id="progressTextDl">0%</span></p>
+            <progress id="progressBarDl" value="0" max="100"></progress>
+        </div>
+        <div class="repo-info" id="repoPanelDl">
+            <h3 id="repoNameDl"></h3>
+            <p id="repoDescDl"></p>
+            <p style="margin-top:8px">⭐ Star：<span id="repoStarDl"></span></p>
+        </div>
+    </div>
+
+    <!-- ========== 上传面板 ========== -->
+    <div class="tab-panel" id="panel-upload">
+        <div class="row">
+            <label>GitHub Fine-grained Token（必填，权限Contents读写）</label>
+            <input type="password" id="tokenUp" placeholder="github_pat_xxxx">
+            <div class="tip">Settings → Developer settings → Fine-grained tokens</div>
+        </div>
+        <div class="row">
+            <label>仓库地址</label>
+            <input id="repoUrlUp" placeholder="https://github.com/xxx/xxx">
+        </div>
+        <div class="flex-row row">
+            <select id="branchSelectUp" style="flex:1">
+                <option value="">先加载分支</option>
+            </select>
+            <button class="btn-green" id="fetchBranchBtnUp">加载分支</button>
+        </div>
+        <div class="row">
+            <label>本地文件</label>
+            <input type="file" id="fileInputUp">
+        </div>
+        <div class="row">
+            <label>仓库内路径（如 readme.md / src/app.js）</label>
+            <input id="filePathUp" placeholder="目标路径">
+        </div>
+        <div class="row">
+            <label>Git提交信息</label>
+            <input id="commitMsgUp" value="feat: upload file via web tool">
+        </div>
+        <button class="btn-blue" id="uploadBtnUp">提交上传</button>
+        <div class="loading" id="loadingTipUp">处理中...</div>
+        <div class="error" id="errorTipUp"></div>
+        <div class="success" id="successTipUp"></div>
+    </div>
+</div>
+
+<script>
+// ===================== 标签切换 =====================
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(t => {
+    t.onclick = () => {
+        tabs.forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+        const tabId = t.dataset.tab;
+        document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+        document.getElementById(`panel-${tabId}`).classList.add('active');
+    }
+})
+
+// 通用工具
+function parseRepoUrl(url){
+    const reg=/github\.com\/([^\/]+)\/([^\/]+)/;
+    const m=url.match(reg);
+    if(!m)return null;
+    return {owner:m[1],repo:m[2].replace('.git','')}
+}
+
+// ===================== 下载模块 =====================
+const repoUrlDl = document.getElementById('repoUrlDl');
+const branchSelectDl = document.getElementById('branchSelectDl');
+const fetchBtnDl = document.getElementById('fetchBtnDl');
+const downloadBtnDl = document.getElementById('downloadBtnDl');
+const loadingTipDl = document.getElementById('loadingTipDl');
+const errorTipDl = document.getElementById('errorTipDl');
+const repoPanelDl = document.getElementById('repoPanelDl');
+const progressBoxDl = document.getElementById('progressBoxDl');
+const progressBarDl = document.getElementById('progressBarDl');
+const progressTextDl = document.getElementById('progressTextDl');
+
+function showDlLoading(txt='请求中...'){
+    loadingTipDl.textContent=txt;loadingTipDl.style.display='block';errorTipDl.style.display='none';
+}
+function hideDlLoading(){loadingTipDl.style.display='none'}
+function showDlErr(msg){
+    errorTipDl.textContent=msg;errorTipDl.style.display='block';hideDlLoading();repoPanelDl.style.display='none';downloadBtnDl.style.display='none';
+}
+
+fetchBtnDl.addEventListener('click',async ()=>{
+    const url=repoUrlDl.value.trim();
+    if(!url)return showDlErr('请输入仓库地址');
+    const p=parseRepoUrl(url);
+    if(!p)return showDlErr('地址格式错误');
+    const {owner,repo}=p;
+    const apiBase=`https://api.github.com/repos/${owner}/${repo}`;
+    showDlLoading('获取仓库信息...');
+    try{
+        const repoRes=await fetch(apiBase);
+        if(!repoRes.ok)throw new Error('仓库不存在或访问受限');
+        const repoData=await repoRes.json();
+        document.getElementById('repoNameDl').innerText=`${owner}/${repo}`;
+        document.getElementById('repoDescDl').innerText=repoData.description||'无描述';
+        document.getElementById('repoStarDl').innerText=repoData.stargazers_count;
+        repoPanelDl.style.display='block';
+
+        const brRes=await fetch(`${apiBase}/branches`);
+        const brs=await brRes.json();
+        branchSelectDl.innerHTML='';
+        brs.forEach(b=>{
+            const opt=document.createElement('option');opt.value=b.name;opt.innerText=b.name;
+            branchSelectDl.appendChild(opt);
+        })
+        downloadBtnDl.style.display='block';
+        hideDlLoading();
+    }catch(e){showDlErr(e.message)}
+})
+
+async function getAllFiles(path,branch,zip,owner,repo){
+    const res=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
+    const list=await res.json();
+    for(const item of list){
+        if(item.type==='dir') await getAllFiles(item.path,branch,zip,owner,repo);
+        else if(item.type==='file'){
+            const f=await fetch(item.download_url);
+            const blob=await f.blob();
+            zip.file(item.path,blob);
+            progressBarDl.value+=1;
+            const per=Math.round((progressBarDl.value/progressBarDl.max)*100);
+            progressTextDl.innerText=per+'%';
+        }
+    }
+}
+
+downloadBtnDl.addEventListener('click',async ()=>{
+    const p=parseRepoUrl(repoUrlDl.value.trim());
+    const {owner,repo}=p;
+    const branch=branchSelectDl.value;
+    if(!branch)return showDlErr('请选择分支');
+    showDlLoading('扫描全部文件...');
+    progressBoxDl.style.display='block';
+    downloadBtnDl.disabled=true;fetchBtnDl.disabled=true;
+    try{
+        const countAll=async (path,ref)=>{
+            let cnt=0;
+            const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${ref}`);
+            const list=await r.json();
+            for(let i of list){
+                if(i.type==='dir') cnt+=await countAll(i.path,ref);
+                else cnt++;
+            }
+            return cnt;
+        }
+        const total=await countAll('',branch);
+        progressBarDl.max=total;progressBarDl.value=0;
+        const zip=new JSZip();
+        await getAllFiles('',branch,zip,owner,repo);
+        showDlLoading('正在打包ZIP...');
+        const blob=await zip.generateAsync({type:'blob'});
+        saveAs(blob,`${repo}-${branch}.zip`);
+        hideDlLoading();alert('✅ 下载打包完成！');
+    }catch(e){showDlErr('失败：'+e.message+'\n仓库过大容易超时')}
+    finally{downloadBtnDl.disabled=false;fetchBtnDl.disabled=false;}
+})
+
+// ===================== 上传模块 =====================
+const tokenUp = document.getElementById('tokenUp');
+const repoUrlUp = document.getElementById('repoUrlUp');
+const branchSelectUp = document.getElementById('branchSelectUp');
+const fetchBranchBtnUp = document.getElementById('fetchBranchBtnUp');
+const fileInputUp = document.getElementById('fileInputUp');
+const filePathUp = document.getElementById('filePathUp');
+const commitMsgUp = document.getElementById('commitMsgUp');
+const uploadBtnUp = document.getElementById('uploadBtnUp');
+const loadingTipUp = document.getElementById('loadingTipUp');
+const errorTipUp = document.getElementById('errorTipUp');
+const successTipUp = document.getElementById('successTipUp');
+
+function showUpLoading(txt='处理中...'){
+    loadingTipUp.textContent=txt;loadingTipUp.style.display='block';errorTipUp.style.display='none';successTipUp.style.display='none';
+}
+function hideUpLoading(){loadingTipUp.style.display='none'}
+function showUpErr(msg){
+    errorTipUp.textContent=msg;errorTipUp.style.display='block';hideUpLoading();successTipUp.style.display='none';
+}
+function showUpSucc(msg){
+    successTipUp.textContent=msg;successTipUp.style.display='block';hideUpLoading();errorTipUp.style.display='none';
+}
+
+fetchBranchBtnUp.addEventListener('click',async ()=>{
+    const token=tokenUp.value.trim();
+    const url=repoUrlUp.value.trim();
+    if(!token)return showUpErr('请填写Token');
+    const p=parseRepoUrl(url);
+    if(!p)return showUpErr('仓库地址格式错误');
+    const {owner,repo}=p;
+    showUpLoading('获取分支列表...');
+    try{
+        const res=await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`,{
+            headers:{Authorization:`Bearer ${token}`}
+        })
+        if(!res.ok)throw new Error(`${res.status} ${res.statusText}`);
+        const brs=await res.json();
+        branchSelectUp.innerHTML='';
+        brs.forEach(b=>{
+            const opt=document.createElement('option');opt.value=b.name;opt.innerText=b.name;
+            branchSelectUp.appendChild(opt);
+        })
+        showUpSucc(`✅ 加载 ${brs.length} 个分支成功`);
+    }catch(e){showUpErr(e.message)}
+})
+
+uploadBtnUp.addEventListener('click',async ()=>{
+    const token=tokenUp.value.trim();
+    const repoUrl=repoUrlUp.value.trim();
+    const branch=branchSelectUp.value;
+    const fpath=filePathUp.value.trim();
+    const msg=commitMsgUp.value.trim();
+    const file=fileInputUp.files[0];
+    if(!token)return showUpErr('缺少Token');
+    const p=parseRepoUrl(repoUrl);
+    if(!p)return showUpErr('仓库地址非法');
+    if(!branch)return showUpErr('先加载并选择分支');
+    if(!file)return showUpErr('请选择本地文件');
+    if(!fpath)return showUpErr('填写仓库目标路径');
+    if(!msg)return showUpErr('提交信息不能为空');
+    const {owner,repo}=p;
+    showUpLoading('读取文件并编码...');
+    try{
+        const buf=await file.arrayBuffer();
+        const u8=new Uint8Array(buf);
+        let bin='';u8.forEach(b=>bin+=String.fromCharCode(b));
+        const b64=btoa(bin);
+        let sha=null;
+        try{
+            const fr=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${fpath}?ref=${branch}`,{
+                headers:{Authorization:`Bearer ${token}`}
+            })
+            if(fr.ok){
+                const fj=await fr.json();sha=fj.sha;
+            }
+        }catch(e){}
+        showUpLoading('提交到GitHub...');
+        const payload={message:msg,content:b64,branch};
+        if(sha)payload.sha=sha;
+        const upRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${fpath}`,{
+            method:'PUT',
+            headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        })
+        if(!upRes.ok){
+            const err=await upRes.json();
+            throw new Error(`${upRes.status}：${err.message||'上传失败'}`)
+        }
+        const data=await upRes.json();
+        showUpSucc(`✅ 上传成功！${data.content.html_url}`);
+    }catch(e){showUpErr(e.message)}
+})
+</script>
+</body>
+</html>
